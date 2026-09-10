@@ -1,4 +1,4 @@
-  import streamlit as st
+import streamlit as st
 import sqlite3
 import uuid
 import streamlit_authenticator as stauth
