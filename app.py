@@ -1,6 +1,5 @@
 import streamlit as st
 import sqlite3
-import uuid
 import streamlit_authenticator as stauth
 import bcrypt
 
@@ -119,7 +118,7 @@ if not st.session_state.get('authentication_status'):
             submit_reg = st.form_submit_button("Register")
             
             if submit_reg:
-                if not nuovo_user or not nuovo_nome or not nueva_email if 'nueva_email' in locals() else not nuova_email or not nuova_pwd:
+                if not nuovo_user or not nuovo_nome or not nuova_email or not nuova_pwd:
                     st.error("All fields are required!")
                 elif nuova_pwd != conferma_pwd:
                     st.error("Passwords do not match!")
@@ -141,6 +140,7 @@ if not st.session_state.get('authentication_status'):
 # --- MAIN APPLICATION (AFTER LOGIN) ---
 if st.session_state.get('authentication_status') == True:
     name = st.session_state.get('name')
+    username = st.session_state.get('username')
     
     authenticator.logout('Logout', 'sidebar')
     st.sidebar.markdown(f"Welcome, **{name}**!")
@@ -194,22 +194,16 @@ if st.session_state.get('authentication_status') == True:
             )
         """)
         
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS utenti_device (
-                device_id TEXT PRIMARY KEY,
-                utente TEXT
-            )
-        """)
-        
+        # Updated table structure using username instead of device_id
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS rose (
-                device_id TEXT,
+                username TEXT,
                 torneo TEXT,
                 giornata TEXT,
                 utente TEXT,
                 formazione TEXT,
                 spesa INTEGER,
-                PRIMARY KEY (device_id, torneo, giornata)
+                PRIMARY KEY (username, torneo, giornata)
             )
         """)
         
@@ -237,6 +231,28 @@ if st.session_state.get('authentication_status') == True:
                 dettaglio_set TEXT
             )
         """)
+
+        # Migration helper if old table schema exists
+        cursor.execute("PRAGMA table_info(rose)")
+        columns_rose = [col[1] for col in cursor.fetchall()]
+        if "device_id" in columns_rose and "username" not in columns_rose:
+            cursor.execute("ALTER TABLE rose RENAME TO rose_old")
+            cursor.execute("""
+                CREATE TABLE rose (
+                    username TEXT,
+                    torneo TEXT,
+                    giornata TEXT,
+                    utente TEXT,
+                    formazione TEXT,
+                    spesa INTEGER,
+                    PRIMARY KEY (username, torneo, giornata)
+                )
+            """)
+            cursor.execute("""
+                INSERT OR IGNORE INTO rose (username, torneo, giornata, utente, formazione, spesa)
+                SELECT utente, torneo, giornata, utente, formazione, spesa FROM rose_old
+            """)
+            cursor.execute("DROP TABLE rose_old")
 
         colonne_da_aggiungere = [
             ("config_giornate", "budget", "INTEGER DEFAULT 100"),
@@ -296,9 +312,6 @@ if st.session_state.get('authentication_status') == True:
         conn.close()
 
     init_db()
-
-    if 'device_id' not in st.session_state:
-        st.session_state['device_id'] = str(uuid.uuid4())
 
     # --- COMMON HEADER ---
     st.title("🎮 Brawl Fantasy")
@@ -447,28 +460,22 @@ if st.session_state.get('authentication_status') == True:
             conn = sqlite3.connect("brawl_fantasy.db")
             cursor = conn.cursor()
             
-            cursor.execute("SELECT utente FROM utenti_device WHERE device_id = ?", (st.session_state['device_id'],))
-            res_device_user = cursor.fetchone()
-            nome_fissato = res_device_user[0] if res_device_user else name
-
-            cursor.execute("SELECT utente, formazione FROM rose WHERE device_id = ? AND torneo = ? AND giornata = ?", 
-                           (st.session_state['device_id'], torneo_selezionato, giornata_selezionata))
+            cursor.execute("SELECT utente, formazione FROM rose WHERE username = ? AND torneo = ? AND giornata = ?", 
+                           (username, torneo_selezionato, giornata_selezionata))
             risultato_esistente = cursor.fetchone()
             conn.close()
 
-            if not nome_fissato and risultato_esistente:
-                nome_fissato = risultato_esistente[0]
-
+            nome_fissato = risultato_esistente[0] if risultato_esistente else name
             formazione_esistente = [t.strip() for t in risultato_esistente[1].split(",")] if risultato_esistente else []
-            formazione_esistente = [t for t in formazione_esistente if t in team_disponibili_giornata_list]
+            formazione_esistente = [t for t in formation_esistente if t in team_disponibili_giornata_list] if 'formation_esistente' in locals() else [t for t in formazione_esistente if t in team_disponibili_giornata_list]
 
             if nome_fissato:
-                st.caption(f"👤 Linked device name: **{nome_fissato}**")
+                st.caption(f"👤 Logged Account User: **{name}**")
 
             disable_inputs = (matchday_bloccato == 1)
 
-            st.markdown("#### 👤 Your Name / Team Nickname")
-            nome_utente = st.text_input("Enter your unique nickname for this device:", value=nome_fissato, disabled=disable_inputs, label_visibility="collapsed")
+            st.markdown("#### 👤 Your Display Name / Nickname")
+            nome_utente = st.text_input("Enter your nickname for leaderboards:", value=nome_fissato, disabled=disable_inputs)
             nome_pulito = nome_utente.strip()
 
             st.markdown("<br>", unsafe_allow_html=True)
@@ -509,22 +516,13 @@ if st.session_state.get('authentication_status') == True:
                         cursor = conn.cursor()
                         
                         cursor.execute("""
-                            INSERT OR REPLACE INTO utenti_device (device_id, utente) 
-                            VALUES (?, ?)
-                        """, (st.session_state['device_id'], nome_pulito))
-                        
-                        cursor.execute("""
-                            INSERT OR REPLACE INTO rose (device_id, torneo, giornata, utente, formazione, spesa) 
+                            INSERT OR REPLACE INTO rose (username, torneo, giornata, utente, formazione, spesa) 
                             VALUES (?, ?, ?, ?, ?, ?)
-                        """, (st.session_state['device_id'], torneo_selezionato, giornata_selezionata, nome_pulito, formazione_str, spesa_totale))
-                        
-                        cursor.execute("""
-                            UPDATE rose SET utente = ? WHERE device_id = ?
-                        """, (nome_pulito, st.session_state['device_id']))
+                        """, (username, torneo_selezionato, giornata_selezionata, nome_pulito, formazione_str, spesa_totale))
 
                         conn.commit()
                         conn.close()
-                        st.success(f"🎉 Lineup successfully saved for **{nome_pulito}**!")
+                        st.success(f"🎉 Lineup successfully saved for account **{name}**!")
                         st.rerun()
 
         st.divider()
@@ -999,19 +997,19 @@ if st.session_state.get('authentication_status') == True:
             st.markdown(f"### 🗑️ Manage Lineups ({torneo_selezionato} - {giornata_selezionata})")
             conn = sqlite3.connect("brawl_fantasy.db")
             cursor = conn.cursor()
-            cursor.execute("SELECT device_id, utente, formazione FROM rose WHERE torneo = ? AND giornata = ?", (torneo_selezionato, giornata_selezionata))
+            cursor.execute("SELECT username, utente, formazione FROM rose WHERE torneo = ? AND giornata = ?", (torneo_selezionato, giornata_selezionata))
             rose_per_elimina = cursor.fetchall()
             conn.close()
 
             if rose_per_elimina:
-                opzioni_rose = {f"{r[1]} ({r[2]})": r[0] for r in rose_per_elimina}
+                opzioni_rose = {f"{r[1]} (User: {r[0]})": r[0] for r in rose_per_elimina}
                 rosa_scelta_label = st.selectbox("Select lineup to delete:", list(opzioni_rose.keys()))
 
                 if st.button("🗑️ Delete Selected Lineup", type="primary"):
-                    id_da_eliminare = opzioni_rose[rosa_scelta_label]
+                    username_da_eliminare = opzioni_rose[rosa_scelta_label]
                     conn = sqlite3.connect("brawl_fantasy.db")
                     cursor = conn.cursor()
-                    cursor.execute("DELETE FROM rose WHERE device_id = ? AND torneo = ? AND giornata = ?", (id_da_eliminare, torneo_selezionato, giornata_selezionata))
+                    cursor.execute("DELETE FROM rose WHERE username = ? AND torneo = ? AND giornata = ?", (username_da_eliminare, torneo_selezionato, giornata_selezionata))
                     conn.commit()
                     conn.close()
                     st.success(f"✅ Lineup deleted successfully!")
