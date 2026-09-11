@@ -194,7 +194,6 @@ if st.session_state.get('authentication_status') == True:
             )
         """)
         
-        # Updated table structure using username instead of device_id
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS rose (
                 username TEXT,
@@ -454,9 +453,21 @@ if st.session_state.get('authentication_status') == True:
         else:
             st.caption("⏱️ **Notice:** You have time until one minute before the start of the competition to create or modify your lineup.")
 
-        if not team_disponibili_giornata_list:
-            st.warning(f"⚠️ There are no active teams configured as available for '{giornata_selezionata}' yet.")
+        # --- SEZIONE LISTA TEAM DISPONIBILI E PREZZI ---
+        if team_disponibili_giornata_list:
+            with st.expander("📊 View Available Teams & Prices for this Matchday", expanded=True):
+                st.markdown("Here are the teams available for selection and their respective credit costs:")
+                cols_grid = st.columns(2)
+                for idx, t_disp in enumerate(team_disponibili_giornata_list):
+                    prezzo_t = prezzi_team.get(t_disp, 0)
+                    with cols_grid[idx % 2]:
+                        st.markdown(f"- **{t_disp}**: `{prezzo_t} credits`")
         else:
+            st.warning(f"⚠️ There are no active teams configured as available for '{giornata_selezionata}' yet.")
+
+        st.divider()
+
+        if team_disponibili_giornata_list:
             conn = sqlite3.connect("brawl_fantasy.db")
             cursor = conn.cursor()
             
@@ -466,8 +477,14 @@ if st.session_state.get('authentication_status') == True:
             conn.close()
 
             nome_fissato = risultato_esistente[0] if risultato_esistente else name
-            formazione_esistente = [t.strip() for t in risultato_esistente[1].split(",")] if risultato_esistente else []
-            formazione_esistente = [t for t in formation_esistente if t in team_disponibili_giornata_list] if 'formation_esistente' in locals() else [t for t in formazione_esistente if t in team_disponibili_giornata_list]
+            formazione_esistente_grezza = [t.strip() for t in risultato_esistente[1].split(",")] if risultato_esistente else []
+            
+            # Convert existing raw team names to match the new multiselect format mapping (e.g. "Team Name (32 credits)")
+            formazione_esistente = []
+            for t_ex in formazione_esistente_grezza:
+                if t_ex in team_disponibili_giornata_list:
+                    p_ex = prezzi_team.get(t_ex, 0)
+                    formazione_esistente.append(f"{t_ex} ({p_ex} credits)")
 
             if nome_fissato:
                 st.caption(f"👤 Logged Account User: **{name}**")
@@ -480,12 +497,22 @@ if st.session_state.get('authentication_status') == True:
 
             st.markdown("<br>", unsafe_allow_html=True)
 
-            team_selezionati = st.multiselect(
+            # --- PREPARAZIONE OPZIONI PER IL MULTISELECT CON PREZZI INCLUSI ---
+            opzioni_mappate = {}
+            for t_disp in team_disponibili_giornata_list:
+                prezzo_t = prezzi_team.get(t_disp, 0)
+                label_opzione = f"{t_disp} ({prezzo_t} credits)"
+                opzioni_mappate[label_opzione] = t_disp
+
+            team_selezionati_etichette = st.multiselect(
                 f"Select your {team_richiesti} teams (from available teams):",
-                options=team_disponibili_giornata_list,
+                options=list(opzioni_mappate.keys()),
                 default=formazione_esistente,
                 disabled=disable_inputs
             )
+
+            # Estraiamo i veri nomi puliti dei team selezionati tramite il dizionario di mappa
+            team_selezionati = [opzioni_mappate[etab] for etab in team_selezionati_etichette if etab in opzioni_mappate]
 
             spesa_totale = sum(prezzi_team.get(t, 0) for t in team_selezionati)
             crediti_rimasti = budget_giornata - spesa_totale
