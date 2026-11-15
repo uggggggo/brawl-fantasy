@@ -4,44 +4,65 @@ import streamlit_authenticator as stauth
 import bcrypt
 
 # --- PAGE CONFIGURATION & UI STYLING ---
-st.set_page_config(page_title="Brawl Fantasy - Tournaments", page_icon="🎮", layout="centered")
+st.set_page_config(page_title="Brawl Fantasy - Tournaments", page_icon="logo.png", layout="centered")
 
-# Minimal and clean CSS style
+# Custom Cartoon / Gaming Purple-Gold Theme CSS (Fixed Contrast for Buttons)
 st.markdown("""
     <style>
+    /* Sfondo generale in stile gaming scuro/viola */
     .stApp {
-        background: linear-gradient(135deg, #090d16 0%, #0e1626 50%, #070a10 100%);
+        background: linear-gradient(135deg, #0f0817 0%, #1a0b2e 50%, #08040d 100%);
         background-attachment: fixed;
     }
-    .stApp, .stApp *:not(.stTextInput input, button) {
-        color: #ffffff !important;
+    .stApp, .stApp *:not(.stTextInput input, button, select) {
+        color: #f3f0ff !important;
     }
+    
+    /* Sidebar personalizzata con stacco viola */
     section[data-testid="stSidebar"] {
-        background: linear-gradient(135deg, #090d16 0%, #0e1626 50%, #070a10 100%) !important;
-        border-right: 1px solid rgba(255, 255, 255, 0.08);
+        background: linear-gradient(180deg, #130a21 0%, #0d0614 100%) !important;
+        border-right: 2px solid rgba(168, 85, 247, 0.2);
     }
     section[data-testid="stSidebar"], section[data-testid="stSidebar"] * {
-        color: #ffffff !important;
+        color: #f3f0ff !important;
     }
-    .stTextInput input {
-        background-color: rgba(255, 255, 255, 0.05) !important;
-        border: 2px solid rgba(255, 75, 75, 0.5) !important;
-        border-radius: 8px !important;
+    
+    /* Campi di input in stile */
+    .stTextInput input, .stSelectbox select {
+        background-color: rgba(26, 11, 46, 0.7) !important;
+        border: 2px solid rgba(168, 85, 247, 0.4) !important;
+        border-radius: 10px !important;
         color: white !important;
         font-weight: 500;
     }
+    .stTextInput input:focus, .stSelectbox select:focus {
+        border-color: #ffd700 !important;
+        box-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+    }
+    
+    /* Bottoni in stile videogioco con testo scuro e leggibile */
     div.stButton > button {
-        border-radius: 8px;
+        border-radius: 10px;
         font-weight: bold;
-        border: 1px solid rgba(255, 255, 255, 0.15);
-        color: white !important;
-        background-color: rgba(255, 255, 255, 0.05);
+        border: 2px solid rgba(255, 215, 0, 0.6);
+        color: #120524 !important;
+        background: linear-gradient(135deg, #f3ca20 0%, #d49e00 100%);
         width: 100%;
+        transition: all 0.3s ease;
+        text-shadow: none !important;
     }
     div.stButton > button:hover {
-        border-color: #ff4b4b;
-        color: #ff4b4b !important;
-        box-shadow: 0 4px 12px rgba(255, 75, 75, 0.2);
+        border-color: #ffffff;
+        color: #ffffff !important;
+        background: linear-gradient(135deg, #a855f7 0%, #7928ca 100%);
+        box-shadow: 0 4px 15px rgba(168, 85, 247, 0.5);
+        transform: translateY(-2px);
+    }
+    
+    /* Metriche e badge */
+    [data-testid="stMetricValue"] {
+        color: #ffd700 !important;
+        text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
     }
     </style>
 """, unsafe_allow_html=True)
@@ -95,7 +116,11 @@ authenticator = stauth.Authenticate(
 
 # --- LOGIN / SIGN UP SCREEN ---
 if not st.session_state.get('authentication_status'):
-    st.title("🎮 Brawl Fantasy - Access")
+    col_logo_login, col_title_login = st.columns([1, 3])
+    with col_logo_login:
+        st.image("logo.png", use_container_width=True)
+    with col_title_login:
+        st.title("Brawl Fantasy - Access")
     
     scelta_auth = st.radio("Choose an option:", ["Login", "Register a new account"], horizontal=True)
     
@@ -141,6 +166,8 @@ if not st.session_state.get('authentication_status'):
 if st.session_state.get('authentication_status') == True:
     name = st.session_state.get('name')
     username = st.session_state.get('username')
+    
+    st.sidebar.image("logo.png", use_container_width=True)
     
     authenticator.logout('Logout', 'sidebar')
     st.sidebar.markdown(f"Welcome, **{name}**!")
@@ -231,7 +258,6 @@ if st.session_state.get('authentication_status') == True:
             )
         """)
 
-        # Migration helper if old table schema exists
         cursor.execute("PRAGMA table_info(rose)")
         columns_rose = [col[1] for col in cursor.fetchall()]
         if "device_id" in columns_rose and "username" not in columns_rose:
@@ -313,10 +339,14 @@ if st.session_state.get('authentication_status') == True:
     init_db()
 
     # --- COMMON HEADER ---
-    st.title("🎮 Brawl Fantasy")
+    col_logo_main, col_title_main = st.columns([1, 5])
+    with col_logo_main:
+        st.image("logo.png", use_container_width=True)
+    with col_title_main:
+        st.title("Brawl Fantasy")
+    
     st.subheader("🔥 Tournament & Competition Management")
-
-    st.info("💡 **Note for participants:** For a better visual experience, it is recommended to set the application to **Dark Mode** using Streamlit settings.")
+    st.info("💡 **Please use Dark Mode for a better experience!**")
 
     st.markdown("---")
 
@@ -348,11 +378,29 @@ if st.session_state.get('authentication_status') == True:
     tot_giornate = tornei_info.get(torneo_selezionato, 4)
     lista_giornate = [f"Matchday {i}" for i in range(1, tot_giornate + 1)]
 
-    st.sidebar.header("📋 Main Menu")
-    modalita = st.sidebar.radio(
-        "Choose section:", 
-        ["Rules & Regulations", "Homepage", "General Leaderboard", "Match Results", "Admin Area (Tournaments & Scores)"]
-    )
+    # --- HORIZONTAL TILE NAVIGATION BAR ---
+    if 'modalita' not in st.session_state:
+        st.session_state['modalita'] = "Homepage"
+
+    st.markdown("#### 🧭 Main Navigation")
+    nav_cols = st.columns(5)
+    
+    sezioni = [
+        ("Homepage", "🛒", "Lineup"),
+        ("General Leaderboard", "🏆", "Leaderboard"),
+        ("Match Results", "⚔️", "Results"),
+        ("Rules & Regulations", "📖", "Rules"),
+        ("Admin Area (Tournaments & Scores)", "⚙️", "Admin")
+    ]
+
+    for idx, (sec_key, sec_emoji, sec_label) in enumerate(sezioni):
+        with nav_cols[idx]:
+            if st.button(f"{sec_emoji} {sec_label}", key=f"nav_btn_{idx}"):
+                st.session_state['modalita'] = sec_key
+                st.rerun()
+
+    modalita = st.session_state['modalita']
+    st.markdown("---")
 
     st.sidebar.header("📅 Matchday Selection")
     giornata_selezionata = st.sidebar.radio(
@@ -388,6 +436,12 @@ if st.session_state.get('authentication_status') == True:
     cursor.execute("SELECT team FROM team_disponibili_giornata WHERE torneo = ? AND giornata = ?", (torneo_selezionato, giornata_selezionata))
     team_disponibili_giornata_list = [row[0] for row in cursor.fetchall()]
     conn.close()
+
+    team_disponibili_giornata_list = sorted(
+        team_disponibili_giornata_list, 
+        key=lambda t: prezzi_team.get(t, 0), 
+        reverse=True
+    )
 
 
     # ==========================================
@@ -453,15 +507,37 @@ if st.session_state.get('authentication_status') == True:
         else:
             st.caption("⏱️ **Notice:** You have time until one minute before the start of the competition to create or modify your lineup.")
 
-        # --- SEZIONE LISTA TEAM DISPONIBILI E PREZZI ---
         if team_disponibili_giornata_list:
-            with st.expander("📊 View Available Teams & Prices for this Matchday", expanded=True):
-                st.markdown("Here are the teams available for selection and their respective credit costs:")
-                cols_grid = st.columns(2)
-                for idx, t_disp in enumerate(team_disponibili_giornata_list):
-                    prezzo_t = prezzi_team.get(t_disp, 0)
-                    with cols_grid[idx % 2]:
-                        st.markdown(f"- **{t_disp}**: `{prezzo_t} credits`")
+            # --- GRAFICA PULITA E MODERNA PER AVAILABLE TEAMS & PRICES ---
+            teams_html_parts = []
+            for t_disp in team_disponibili_giornata_list:
+                prezzo_t = prezzi_team.get(t_disp, 0)
+                teams_html_parts.append(
+                    f'<div style="background: rgba(168, 85, 247, 0.12); border: 1px solid rgba(168, 85, 247, 0.3); border-radius: 10px; padding: 10px 14px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">'
+                    f'<span style="font-weight: 600; color: #f3f0ff;">🎮 {t_disp}</span>'
+                    f'<span style="background: rgba(255, 215, 0, 0.15); border: 1px solid rgba(255, 215, 0, 0.4); color: #ffd700; padding: 3px 10px; border-radius: 6px; font-weight: bold; font-size: 0.9em;">{prezzo_t} credits</span>'
+                    f'</div>'
+                )
+            
+            meta = (len(teams_html_parts) + 1) // 2
+            col1_teams = "".join(teams_html_parts[:meta])
+            col2_teams = "".join(teams_html_parts[meta:])
+
+            html_box = (
+                f'<div style="background: linear-gradient(135deg, rgba(22, 10, 38, 0.9) 0%, rgba(12, 4, 20, 0.95) 100%); border: 1px solid rgba(168, 85, 247, 0.35); border-radius: 16px; padding: 20px; margin-top: 15px; margin-bottom: 20px; box-shadow: 0 8px 25px rgba(0,0,0,0.4);">'
+                f'<div style="font-size: 1.1em; font-weight: bold; color: #ffd700; margin-bottom: 6px; display: flex; align-items: center; gap: 8px;">'
+                f'<span>📊</span> Available Teams & Prices ({giornata_selezionata})'
+                f'</div>'
+                f'<div style="font-size: 0.9em; color: #d1c4e9; margin-bottom: 16px;">'
+                f'Review the official roster and credit costs for this matchday before selecting your lineup:'
+                f'</div>'
+                f'<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">'
+                f'<div>{col1_teams}</div>'
+                f'<div>{col2_teams}</div>'
+                f'</div>'
+                f'</div>'
+            )
+            st.markdown(html_box, unsafe_allow_html=True)
         else:
             st.warning(f"⚠️ There are no active teams configured as available for '{giornata_selezionata}' yet.")
 
@@ -479,7 +555,6 @@ if st.session_state.get('authentication_status') == True:
             nome_fissato = risultato_esistente[0] if risultato_esistente else name
             formazione_esistente_grezza = [t.strip() for t in risultato_esistente[1].split(",")] if risultato_esistente else []
             
-            # Convert existing raw team names to match the new multiselect format mapping (e.g. "Team Name (32 credits)")
             formazione_esistente = []
             for t_ex in formazione_esistente_grezza:
                 if t_ex in team_disponibili_giornata_list:
@@ -497,7 +572,6 @@ if st.session_state.get('authentication_status') == True:
 
             st.markdown("<br>", unsafe_allow_html=True)
 
-            # --- PREPARAZIONE OPZIONI PER IL MULTISELECT CON PREZZI INCLUSI ---
             opzioni_mappate = {}
             for t_disp in team_disponibili_giornata_list:
                 prezzo_t = prezzi_team.get(t_disp, 0)
@@ -505,13 +579,12 @@ if st.session_state.get('authentication_status') == True:
                 opzioni_mappate[label_opzione] = t_disp
 
             team_selezionati_etichette = st.multiselect(
-                f"Select your {team_richiesti} teams (from available teams):",
+                f"Select your {team_richiesti} teams",
                 options=list(opzioni_mappate.keys()),
                 default=formazione_esistente,
                 disabled=disable_inputs
             )
 
-            # Estraiamo i veri nomi puliti dei team selezionati tramite il dizionario di mappa
             team_selezionati = [opzioni_mappate[etab] for etab in team_selezionati_etichette if etab in opzioni_mappate]
 
             spesa_totale = sum(prezzi_team.get(t, 0) for t in team_selezionati)
@@ -564,11 +637,9 @@ if st.session_state.get('authentication_status') == True:
         if tutte_le_rose:
             for r in tutte_le_rose:
                 st.markdown(
-                    f"""
-                    <div style="padding: 10px 14px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08); margin-bottom: 8px; background-color: rgba(255,255,255,0.02);">
-                        👤 <b>{r[0]}</b> — Lineup: <i>{r[1]}</i> <span style="color: #a0a0a0; float: right;">({r[2]} credits)</span>
-                    </div>
-                    """,
+                    f'<div style="padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(168, 85, 247, 0.3); margin-bottom: 10px; background: linear-gradient(135deg, rgba(26, 11, 46, 0.6) 0%, rgba(13, 6, 20, 0.8) 100%); box-shadow: 0 4px 10px rgba(0,0,0,0.3);">'
+                    f'🔮 <b>{r[0]}</b> — Lineup: <i style="color: #ffd700;">{r[1]}</i> <span style="color: #d1c4e9; float: right;">({r[2]} credits)</span>'
+                    f'</div>',
                     unsafe_allow_html=True
                 )
         else:
@@ -625,17 +696,22 @@ if st.session_state.get('authentication_status') == True:
             classifica_generale = sorted(classifica_generale, key=lambda x: x["punti_totali"], reverse=True)
 
             for i, pos in enumerate(classifica_generale, 1):
-                st.markdown(
-                    f"""
-                    <div style="padding: 10px 14px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 8px; background-color: rgba(255,255,255,0.02);">
-                        <b>{i}° place: {pos['utente']}</b> — <span style="color: #4cd137; font-weight: bold;">{pos['punti_totali']} Total Points</span>
-                    </div>
-                    """,
-                    unsafe_allow_html=True
-                )
-                with st.expander(f"📊 View breakdown for {pos['utente']}"):
-                    for dg in pos["dettaglio_giornate"]:
-                        st.write(f"- **{dg['giornata']}**: Lineup: *{dg['formazione']}* → **{dg['punti']} pts**")
+                col_info, col_btn = st.columns([10, 1])
+                
+                with col_info:
+                    st.markdown(
+                        f'<div style="padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(255, 215, 0, 0.3); margin-bottom: 10px; background: linear-gradient(135deg, rgba(26, 11, 46, 0.7) 0%, rgba(13, 6, 20, 0.9) 100%); display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 12px rgba(0,0,0,0.4);">'
+                        f'<span><b>{i}° place: {pos["utente"]}</b></span>'
+                        f'<span style="color: #ffd700; font-weight: bold; text-shadow: 0 0 8px rgba(255,215,0,0.4);">{pos["punti_totali"]} Total Points</span>'
+                        f'</div>',
+                        unsafe_allow_html=True
+                    )
+                
+                with col_btn:
+                    with st.popover("", help=f"View breakdown for {pos['utente']}"):
+                        st.markdown(f"#### 📊 Breakdown: {pos['utente']}")
+                        for dg in pos["dettaglio_giornate"]:
+                            st.write(f"- **{dg['giornata']}**: Lineup: *{dg['formazione']}* → **{dg['punti']} pts**")
         else:
             st.info("No lineups registered across any matchday for this tournament yet.")
 
@@ -657,14 +733,23 @@ if st.session_state.get('authentication_status') == True:
             classifica_giornata_lista = sorted(classifica_giornata_lista, key=lambda x: x["punti"], reverse=True)
 
             for i, item in enumerate(classifica_giornata_lista, 1):
-                st.markdown(
-                    f"""
-                    <div style="padding: 10px 14px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 8px; background-color: rgba(255,255,255,0.02);">
-                        <b>{i}° place: {item['utente']}</b> — <span style="color: #4cd137; font-weight: bold;">{item['punti']} pts</span> <span style="color: #a0a0a0; font-size: 0.9em;">(Lineup: <i>{item['formazione']}</i>)</span>
-                    </div>
-                    """,
-                    unsafe_allow_html=True
-                )
+                col_info_g, col_btn_g = st.columns([10, 1])
+                
+                with col_info_g:
+                    st.markdown(
+                        f'<div style="padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(168, 85, 247, 0.3); margin-bottom: 10px; background: linear-gradient(135deg, rgba(26, 11, 46, 0.7) 0%, rgba(13, 6, 20, 0.9) 100%); display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 12px rgba(0,0,0,0.4);">'
+                        f'<span><b>{i}° place: {item["utente"]}</b></span>'
+                        f'<span style="color: #ffd700; font-weight: bold;">{item["punti"]} pts</span>'
+                        f'</div>',
+                        unsafe_allow_html=True
+                    )
+                
+                with col_btn_g:
+                    with st.popover("", help=f"View lineup for {item['utente']}"):
+                        st.markdown(f"#### 📋 Lineup: {item['utente']}")
+                        st.write(f"Matchday: **{giornata_selezionata}**")
+                        st.write(f"Selected teams: *{item['formazione']}*")
+                        st.write(f"Total points: **{item['punti']} pts**")
         else:
             st.info(f"No lineups registered for **{giornata_selezionata}** yet.")
 
@@ -695,22 +780,20 @@ if st.session_state.get('authentication_status') == True:
                 dettaglio = m[7] if m[7] else ""
                 
                 st.markdown(
-                    f"""
-                    <div style="padding: 14px 18px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.12); margin-bottom: 12px; background: linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%);">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <div>
-                                <span style="font-size: 1.15em; font-weight: bold; color: #ffffff;">{t1}</span> 
-                                <span style="font-size: 0.9em; color: #a0a0a0; margin: 0 8px;">vs</span> 
-                                <span style="font-size: 1.15em; font-weight: bold; color: #ffffff;">{t2}</span>
-                            </div>
-                            <div>
-                                <span style="font-size: 1.3em; font-weight: bold; background-color: rgba(255,75,75,0.15); color: #ff4b4b; padding: 4px 12px; border-radius: 6px; border: 1px solid rgba(255,75,75,0.3);">{s1} - {s2}</span>
-                            </div>
-                        </div>
-                        <hr style="margin: 8px 0; border: none; border-top: 1px solid rgba(255,255,255,0.06);">
-                        <small style="color: #a0a0a0;">Set details: {dettaglio} {info_tempo}</small>
-                    </div>
-                    """,
+                    f'<div style="padding: 16px 20px; border-radius: 14px; border: 2px solid rgba(168, 85, 247, 0.4); margin-bottom: 14px; background: linear-gradient(135deg, rgba(26, 11, 46, 0.8) 0%, rgba(13, 6, 20, 0.95) 100%); box-shadow: 0 6px 18px rgba(0,0,0,0.5);">'
+                    f'<div style="display: flex; justify-content: space-between; align-items: center;">'
+                    f'<div>'
+                    f'<span style="font-size: 1.2em; font-weight: bold; color: #ffffff;">{t1}</span> '
+                    f'<span style="font-size: 0.9em; color: #ffd700; margin: 0 10px; font-weight: bold;">VS</span> '
+                    f'<span style="font-size: 1.2em; font-weight: bold; color: #ffffff;">{t2}</span>'
+                    f'</div>'
+                    f'<div>'
+                    f'<span style="font-size: 1.4em; font-weight: bold; background: linear-gradient(135deg, rgba(168, 85, 247, 0.3) 0%, rgba(121, 40, 202, 0.4) 100%); color: #ffd700; padding: 6px 16px; border-radius: 8px; border: 1px solid rgba(255, 215, 0, 0.5); text-shadow: 0 0 10px rgba(255,215,0,0.3);">{s1} - {s2}</span>'
+                    f'</div>'
+                    f'</div>'
+                    f'<hr style="margin: 10px 0; border: none; border-top: 1px solid rgba(168, 85, 247, 0.2);">'
+                    f'<small style="color: #d1c4e9;">Set details: {dettaglio} {info_tempo}</small>'
+                    f'</div>',
                     unsafe_allow_html=True
                 )
         else:
@@ -728,58 +811,125 @@ if st.session_state.get('authentication_status') == True:
                 if len(lista_teams_disponibili_torneo) < 2:
                     st.warning("⚠️ You need at least 2 teams configured in this tournament to schedule a match.")
                 else:
-                    with st.form("form_inserisci_match_strutturato"):
-                        col_d, col_o = st.columns(2)
-                        with col_d:
-                            data_match = st.text_input("Date (e.g. October 12)")
-                        with col_o:
-                            orario_match = st.text_input("Time (e.g. 15:30)")
-                        
-                        st.markdown("---")
-                        
-                        team_uno = st.selectbox("Team 1", lista_teams_disponibili_torneo, key="sel_t1")
-                        default_t2_idx = 1 if len(lista_teams_disponibili_torneo) > 1 else 0
-                        team_due = st.selectbox("Team 2", lista_teams_disponibili_torneo, index=default_t2_idx, key="sel_t2")
-                        
-                        st.markdown("#### 🔢 Score (Best of 5 Sets)")
-                        col_s1, col_s2 = st.columns(2)
-                        with col_s1:
-                            score_uno = st.number_input(f"Sets won by {team_uno}", min_value=0, max_value=5, value=3)
-                        with col_s2:
-                            score_due = st.number_input(f"Sets won by {team_due}", min_value=0, max_value=5, value=0)
-                        
-                        dettaglio_set_input = st.text_input("Set details / partials (e.g. Set 1: 3-1, Set 2: 3-0, Set 3: 3-2)")
-                        
-                        salva_match_btn = st.form_submit_button("➕ Save Structured Match Result")
-                        
-                        if salva_match_btn:
-                            if team_uno == team_due:
-                                st.error("❌ Team 1 and Team 2 cannot be the same team!")
-                            else:
-                                conn = sqlite3.connect("brawl_fantasy.db")
-                                cursor = conn.cursor()
-                                cursor.execute(
-                                    """
-                                    INSERT INTO match_risultati 
-                                    (torneo, giornata, data, orario, team_1, team_2, score_1, score_2, dettaglio_set) 
-                                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                                    """,
-                                    (
-                                        torneo_selezionato, 
-                                        giornata_selezionata, 
-                                        data_match.strip(), 
-                                        orario_match.strip(), 
-                                        team_uno, 
-                                        team_due, 
-                                        score_uno, 
-                                        score_due, 
-                                        dettaglio_set_input.strip()
+                    azione_match = st.radio("Choose action:", ["Insert New Match", "Edit Existing Match"], horizontal=True)
+                    
+                    if azione_match == "Insert New Match":
+                        with st.form("form_inserisci_match_strutturato"):
+                            col_d, col_o = st.columns(2)
+                            with col_d:
+                                data_match = st.text_input("Date (e.g. October 12)")
+                            with col_o:
+                                orario_match = st.text_input("Time (e.g. 15:30)")
+                            
+                            st.markdown("---")
+                            
+                            team_uno = st.selectbox("Team 1", lista_teams_disponibili_torneo, key="sel_t1")
+                            default_t2_idx = 1 if len(lista_teams_disponibili_torneo) > 1 else 0
+                            team_due = st.selectbox("Team 2", lista_teams_disponibili_torneo, index=default_t2_idx, key="sel_t2")
+                            
+                            st.markdown("#### 🔢 Score (Best of 5 Sets)")
+                            col_s1, col_s2 = st.columns(2)
+                            with col_s1:
+                                score_uno = st.number_input(f"Sets won by {team_uno}", min_value=0, max_value=5, value=0)
+                            with col_s2:
+                                score_due = st.number_input(f"Sets won by {team_due}", min_value=0, max_value=5, value=0)
+                            
+                            dettaglio_set_input = st.text_input("Set details / partials (e.g. Set 1: 3-1, Set 2: 3-0, Set 3: 3-2)")
+                            
+                            salva_match_btn = st.form_submit_button("➕ Save Structured Match Result")
+                            
+                            if salva_match_btn:
+                                if team_uno == team_due:
+                                    st.error("❌ Team 1 and Team 2 cannot be the same team!")
+                                else:
+                                    conn = sqlite3.connect("brawl_fantasy.db")
+                                    cursor = conn.cursor()
+                                    cursor.execute(
+                                        """
+                                        INSERT INTO match_risultati 
+                                        (torneo, giornata, data, orario, team_1, team_2, score_1, score_2, dettaglio_set) 
+                                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                        """,
+                                        (
+                                            torneo_selezionato, 
+                                            giornata_selezionata, 
+                                            data_match.strip(), 
+                                            orario_match.strip(), 
+                                            team_uno, 
+                                            team_due, 
+                                            score_uno, 
+                                            score_due, 
+                                            dettaglio_set_input.strip()
+                                        )
                                     )
-                                )
-                                conn.commit()
-                                conn.close()
-                                st.success("✅ Match result added successfully!")
-                                st.rerun()
+                                    conn.commit()
+                                    conn.close()
+                                    st.success("✅ Match result added successfully!")
+                                    st.rerun()
+                    
+                    else: # Edit Existing Match
+                        if not match_salvati:
+                            st.info("No matches available to edit for this matchday.")
+                        else:
+                            opzioni_match_edit = {f"{m[3]} vs {m[4]} ({m[5]}-{m[6]}) [ID: {m[0]}]": m for m in match_salvati}
+                            match_scelto_label = st.selectbox("Select match to edit:", list(opzioni_match_edit.keys()))
+                            match_dati = opzioni_match_edit[match_scelto_label]
+                            
+                            m_id, m_data, m_orario, m_t1, m_t2, m_s1, m_s2, m_det = match_dati
+                            
+                            idx_t1 = lista_teams_disponibili_torneo.index(m_t1) if m_t1 in lista_teams_disponibili_torneo else 0
+                            idx_t2 = lista_teams_disponibili_torneo.index(m_t2) if m_t2 in lista_teams_disponibili_torneo else (1 if len(lista_teams_disponibili_torneo) > 1 else 0)
+                            
+                            with st.form("form_modifica_match_esistente"):
+                                col_d_ed, col_o_ed = st.columns(2)
+                                with col_d_ed:
+                                    edit_data = st.text_input("Date", value=m_data if m_data else "")
+                                with col_o_ed:
+                                    edit_orario = st.text_input("Time", value=m_orario if m_orario else "")
+                                
+                                st.markdown("---")
+                                
+                                edit_t1 = st.selectbox("Team 1", lista_teams_disponibili_torneo, index=idx_t1, key="edit_sel_t1")
+                                edit_t2 = st.selectbox("Team 2", lista_teams_disponibili_torneo, index=idx_t2, key="edit_sel_t2")
+                                
+                                st.markdown("#### 🔢 Score (Best of 5 Sets)")
+                                col_es1, col_es2 = st.columns(2)
+                                with col_es1:
+                                    edit_s1 = st.number_input(f"Sets won by {edit_t1}", min_value=0, max_value=5, value=int(m_s1) if m_s1 is not None else 0)
+                                with col_es2:
+                                    edit_s2 = st.number_input(f"Sets won by {edit_t2}", min_value=0, max_value=5, value=int(m_s2) if m_s2 is not None else 0)
+                                
+                                edit_dettaglio = st.text_input("Set details / partials", value=m_det if m_det else "")
+                                
+                                aggiorna_match_btn = st.form_submit_button("💾 Update Match Details")
+                                
+                                if aggiorna_match_btn:
+                                    if edit_t1 == edit_t2:
+                                        st.error("❌ Team 1 and Team 2 cannot be the same team!")
+                                    else:
+                                        conn = sqlite3.connect("brawl_fantasy.db")
+                                        cursor = conn.cursor()
+                                        cursor.execute(
+                                            """
+                                            UPDATE match_risultati 
+                                            SET data = ?, orario = ?, team_1 = ?, team_2 = ?, score_1 = ?, score_2 = ?, dettaglio_set = ?
+                                            WHERE id = ?
+                                            """,
+                                            (
+                                                edit_data.strip(),
+                                                edit_orario.strip(),
+                                                edit_t1,
+                                                edit_t2,
+                                                edit_s1,
+                                                edit_s2,
+                                                edit_dettaglio.strip(),
+                                                m_id
+                                            )
+                                        )
+                                        conn.commit()
+                                        conn.close()
+                                        st.success("✅ Match updated successfully!")
+                                        st.rerun()
 
                 if match_salvati:
                     st.markdown("#### 🗑️ Remove an entered match:")
@@ -807,7 +957,7 @@ if st.session_state.get('authentication_status') == True:
         password = st.text_input("Enter Admin Password", type="password")
 
         if password == "brawl2026":
-            st.success("🔓 Admin access authorized!")
+            st.success("🔓 Access authorized!")
             
             st.markdown("### 🏟️ Tournaments & Matchdays Management")
             with st.form("form_nuovo_torneo"):
